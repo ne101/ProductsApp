@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">ProductsApp</string>
+    <string name="price">%s $</string>
+    <string name="disc">-%s%%</string>
+</resources>
