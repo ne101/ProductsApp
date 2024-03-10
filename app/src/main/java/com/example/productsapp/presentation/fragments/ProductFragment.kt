@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Color
 import android.net.ConnectivityManager
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -57,6 +58,11 @@ class ProductFragment : Fragment(), OnClickListener {
         showProgressBar()
         showMoreProducts()
         addCategories(adapter)
+        loadData()
+        reloadNetwork()
+    }
+
+    private fun loadData() {
         if (!isNetworkAvailable(requireContext())) {
             Toast.makeText(
                 requireContext(),
@@ -64,8 +70,22 @@ class ProductFragment : Fragment(), OnClickListener {
                 Toast.LENGTH_SHORT
             ).show()
         } else {
-            viewModel.loadMoreProducts()
-            viewModel.getCategories()
+            if (viewModel.productList.value == null) {
+                viewModel.loadMoreProducts()
+                viewModel.getCategories()
+                binding.ivReloaded.visibility = View.INVISIBLE
+            }
+        }
+    }
+
+    private fun reloadNetwork() {
+        if (!isNetworkAvailable(requireContext()) && viewModel.productList.value == null) {
+            binding.ivReloaded.visibility = View.VISIBLE
+        } else {
+            binding.ivReloaded.visibility = View.INVISIBLE
+        }
+        binding.ivReloaded.setOnClickListener {
+            loadData()
         }
     }
 
@@ -97,9 +117,10 @@ class ProductFragment : Fragment(), OnClickListener {
 
             for (filterBinding in filterViews) {
                 filterBinding.filterCardView.setOnClickListener {
-                    binding.customToolbar.tvScreenName.text = filterBinding.tvCategory.text.toString().capitalize()
+                    binding.customToolbar.tvScreenName.text =
+                        filterBinding.tvCategory.text.toString().capitalize()
                     filterBinding.tvCategory.setTextColor(Color.WHITE)
-                    filterBinding.tvCategory.updatePadding(right = paddingInPx/2)
+                    filterBinding.tvCategory.updatePadding(right = paddingInPx / 2)
                     filterBinding.filterCardView.setCardBackgroundColor(Color.parseColor("#52606D"))
                     filterBinding.imageView4.visibility = View.VISIBLE
                     if (isNetworkAvailable(requireContext())) {
@@ -137,7 +158,6 @@ class ProductFragment : Fragment(), OnClickListener {
             }
         }
     }
-
 
 
     private fun showProducts(adapter: ProductAdapter) {
@@ -178,6 +198,7 @@ class ProductFragment : Fragment(), OnClickListener {
 
     private fun addToolbar() {
         binding.customToolbar.tvScreenName.text = "Товары"
+        binding.customToolbar.imageView.visibility = View.INVISIBLE
     }
 
     private fun showProgressBar() {

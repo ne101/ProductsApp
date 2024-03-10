@@ -8,6 +8,7 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.bumptech.glide.Glide
 import com.example.productsapp.R
@@ -49,8 +50,12 @@ class DetailInfoFragment : Fragment() {
 
     private fun observe() {
         viewModel.getProduct(args.productEntity)
+        binding.customToolbar.imageView.setOnClickListener {
+            findNavController().popBackStack()
+        }
         viewModel.product.observe(viewLifecycleOwner) {
             binding.customToolbar.tvScreenName.text = it.brand
+
                 binding.tvTitle.text = it.title
             binding.tvDescription.text = it.description
             binding.tvPrice.text = requireContext().getString(R.string.price, it.price.toString())

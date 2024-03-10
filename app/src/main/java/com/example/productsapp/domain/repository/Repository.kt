@@ -9,7 +9,6 @@ interface Repository {
 
     suspend fun getProductList(skip: Int): ProductListEntity
     suspend fun getProduct(productEntity: ProductEntity): ProductEntity
-    suspend fun getProductListWithSearch(query: String): ProductListEntity
     suspend fun getProductListWithCategories(category: String): ProductListEntity
     suspend fun getCategoryList(): CategoriesEntity
 

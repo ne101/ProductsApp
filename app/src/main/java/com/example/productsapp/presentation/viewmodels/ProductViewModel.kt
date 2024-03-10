@@ -8,7 +8,7 @@ import com.example.productsapp.domain.entities.CategoriesEntity
 import com.example.productsapp.domain.entities.ProductEntity
 import com.example.productsapp.domain.usecases.GetCategoryListUseCase
 import com.example.productsapp.domain.usecases.GetProductListUseCase
-import com.example.productsapp.domain.usecases.GetProductListWithCategory
+import com.example.productsapp.domain.usecases.GetProductListWithCategoryUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -16,7 +16,7 @@ import javax.inject.Inject
 class ProductViewModel @Inject constructor(
     private val getProductListUseCase: GetProductListUseCase,
     private val getCategoryListUseCase: GetCategoryListUseCase,
-    private val getProductListWithCategory: GetProductListWithCategory
+    private val getProductListWithCategory: GetProductListWithCategoryUseCase
 ) : ViewModel() {
 
     private var skip = 0

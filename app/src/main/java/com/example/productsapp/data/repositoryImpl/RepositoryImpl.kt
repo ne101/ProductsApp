@@ -21,10 +21,6 @@ class RepositoryImpl @Inject constructor(
         return productEntity
     }
 
-    override suspend fun getProductListWithSearch( query: String): ProductListEntity {
-        val response = apiService.loadProductListWithSearch(query)
-        return mapper.mapProductResponseToEntityList(response)
-    }
 
     override suspend fun getProductListWithCategories(category: String): ProductListEntity {
         val response = apiService.loadProductListWithCategory(category)
