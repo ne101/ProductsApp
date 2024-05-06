@@ -13,6 +13,7 @@ import androidx.navigation.fragment.navArgs
 import com.bumptech.glide.Glide
 import com.example.productsapp.R
 import com.example.productsapp.databinding.FragmentDetailInfoBinding
+import com.example.productsapp.domain.state.State
 import com.example.productsapp.presentation.ProductApplication
 import com.example.productsapp.presentation.viewmodels.DetailInfoViewModel
 import com.example.productsapp.presentation.viewmodels.ViewModelFactory
@@ -45,28 +46,50 @@ class DetailInfoFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         viewModel = ViewModelProvider(this, viewModelFactory)[DetailInfoViewModel::class.java]
+        viewModel.getProduct(args.productEntity)
+        navigation()
         observe()
     }
 
-    private fun observe() {
-        viewModel.getProduct(args.productEntity)
+    private fun navigation() {
         binding.customToolbar.imageView.setOnClickListener {
             findNavController().popBackStack()
         }
-        viewModel.product.observe(viewLifecycleOwner) {
-            binding.customToolbar.tvScreenName.text = it.brand
+    }
 
-                binding.tvTitle.text = it.title
-            binding.tvDescription.text = it.description
-            binding.tvPrice.text = requireContext().getString(R.string.price, it.price.toString())
-            binding.tvFullPrice.paintFlags = binding.tvFullPrice.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
-            binding.tvFullPrice.text = requireContext().getString(
-                R.string.price,
-                (it.price / (1 - it.discountPercentage / 100)).toInt().toString()
-            )
-            binding.tvDiscountPrecent.text =
-                requireContext().getString(R.string.disc, it.discountPercentage.toString())
-            Glide.with(requireActivity()).load(it.thumbnail).into(binding.ivThumbnail)
+    private fun observe() {
+        binding.progressBar.visibility = View.INVISIBLE
+        viewModel.state.observe(viewLifecycleOwner) {
+            when (it) {
+                is State.Loading -> {
+                    binding.progressBar.visibility = View.VISIBLE
+                }
+                is State.Product -> {
+                    binding.customToolbar.tvScreenName.text = it.product.brand
+
+                    binding.tvTitle.text = it.product.title
+                    binding.tvDescription.text = it.product.description
+                    binding.tvPrice.text =
+                        requireContext().getString(R.string.price, it.product.price.toString())
+                    binding.tvFullPrice.paintFlags =
+                        binding.tvFullPrice.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
+                    binding.tvFullPrice.text = requireContext().getString(
+                        R.string.price,
+                        (it.product.price / (1 - it.product.discountPercentage / 100)).toInt()
+                            .toString()
+                    )
+                    binding.tvDiscountPrecent.text =
+                        requireContext().getString(
+                            R.string.disc,
+                            it.product.discountPercentage.toString()
+                        )
+                    Glide.with(requireActivity()).load(it.product.thumbnail)
+                        .into(binding.ivThumbnail)
+                }
+                else -> {}
+
+            }
+
         }
     }
 

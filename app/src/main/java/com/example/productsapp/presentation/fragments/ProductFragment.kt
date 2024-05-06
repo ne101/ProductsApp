@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.productsapp.databinding.CategoriesCardBinding
 import com.example.productsapp.databinding.FragmentProductBinding
 import com.example.productsapp.domain.entities.ProductEntity
+import com.example.productsapp.domain.state.State
 import com.example.productsapp.presentation.ProductApplication
 import com.example.productsapp.presentation.adapters.OnClickListener
 import com.example.productsapp.presentation.adapters.ProductAdapter
@@ -54,66 +55,56 @@ class ProductFragment : Fragment(), OnClickListener {
         binding.rvAdapter.adapter = adapter
         binding.rvAdapter.layoutManager = GridLayoutManager(context, 1)
         addToolbar()
-        showProducts(adapter)
-        showProgressBar()
-        showMoreProducts()
-        addCategories(adapter)
-        loadData()
         reloadNetwork()
+        loadData()
+        observeViewModel(adapter)
+        showMoreProducts()
+        Log.d("onViewCreated", savedInstanceState.toString())
     }
 
-    private fun loadData() {
-        if (!isNetworkAvailable(requireContext())) {
-            Toast.makeText(
-                requireContext(),
-                "Проверьте подключение к интернету!",
-                Toast.LENGTH_SHORT
-            ).show()
-        } else {
-            if (viewModel.productList.value == null) {
-                viewModel.loadMoreProducts()
-                viewModel.getCategories()
-                binding.ivReloaded.visibility = View.INVISIBLE
+    private fun observeViewModel(adapter: ProductAdapter) {
+        viewModel.state.observe(viewLifecycleOwner) {
+            binding.progressBar.visibility = View.INVISIBLE
+            when (it) {
+                is State.Loading -> {
+                    binding.progressBar.visibility = View.VISIBLE
+                }
+                is State.Products -> {
+                    adapter.submitList(it.products)
+                }
+                is State.Categories -> {
+                    showCategories(it)
+                }
+                is State.ProductsWithCategories -> {
+                    adapter.submitList(it.productsWithCategories)
+                }
+                is State.ListIsFull -> {
+                    adapter.submitList(it.products)
+                }
+                else -> {}
             }
         }
     }
 
-    private fun reloadNetwork() {
-        if (!isNetworkAvailable(requireContext()) && viewModel.productList.value == null) {
-            binding.ivReloaded.visibility = View.VISIBLE
-        } else {
-            binding.ivReloaded.visibility = View.INVISIBLE
-        }
-        binding.ivReloaded.setOnClickListener {
-            loadData()
-        }
-    }
+    private fun showCategories(categories: State.Categories) {
+        val filterViews = mutableListOf<CategoriesCardBinding>()
+        val paddingInDp = 12
+        val density = resources.displayMetrics.density
+        val paddingInPx = (paddingInDp * density).toInt()
 
-    private fun addCategories(adapter: ProductAdapter) {
-        viewModel.categoryList.observe(viewLifecycleOwner) { categories ->
-            val filterViews = mutableListOf<CategoriesCardBinding>()
-            val paddingInDp = 12
-            val density = resources.displayMetrics.density
-            val paddingInPx = (paddingInDp * density).toInt()
-
-            for (tag in categories) {
-                val filterBinding = CategoriesCardBinding.inflate(
-                    layoutInflater,
-                    binding.llFilter,
-                    false
-                )
-                binding.llFilter.addView(filterBinding.root)
-                filterBinding.tvCategory.text = tag.capitalize()
-                filterBinding.filterCardView.setCardBackgroundColor(Color.parseColor("#F8F8F8"))
-                filterBinding.tvCategory.setTextColor(Color.parseColor("#A0A1A3"))
-                filterBinding.imageView4.visibility = View.GONE
-                filterBinding.tvCategory.updatePadding(right = paddingInPx)
-                filterViews.add(filterBinding)
-            }
-
-            viewModel.productListWithCategory.observe(viewLifecycleOwner) { product ->
-                adapter.submitList(product)
-            }
+        for (tag in categories.categories) {
+            val filterBinding = CategoriesCardBinding.inflate(
+                layoutInflater,
+                binding.llFilter,
+                false
+            )
+            binding.llFilter.addView(filterBinding.root)
+            filterBinding.tvCategory.text = tag.capitalize()
+            filterBinding.filterCardView.setCardBackgroundColor(Color.parseColor("#F8F8F8"))
+            filterBinding.tvCategory.setTextColor(Color.parseColor("#A0A1A3"))
+            filterBinding.imageView4.visibility = View.GONE
+            filterBinding.tvCategory.updatePadding(right = paddingInPx)
+            filterViews.add(filterBinding)
 
             for (filterBinding in filterViews) {
                 filterBinding.filterCardView.setOnClickListener {
@@ -121,7 +112,11 @@ class ProductFragment : Fragment(), OnClickListener {
                         filterBinding.tvCategory.text.toString().capitalize()
                     filterBinding.tvCategory.setTextColor(Color.WHITE)
                     filterBinding.tvCategory.updatePadding(right = paddingInPx / 2)
-                    filterBinding.filterCardView.setCardBackgroundColor(Color.parseColor("#52606D"))
+                    filterBinding.filterCardView.setCardBackgroundColor(
+                        Color.parseColor(
+                            "#52606D"
+                        )
+                    )
                     filterBinding.imageView4.visibility = View.VISIBLE
                     if (isNetworkAvailable(requireContext())) {
                         viewModel.getProductListWithCategory(filterBinding.tvCategory.text.toString())
@@ -134,7 +129,11 @@ class ProductFragment : Fragment(), OnClickListener {
                     }
                     for (otherBinding in filterViews) {
                         if (otherBinding != filterBinding) {
-                            otherBinding.filterCardView.setCardBackgroundColor(Color.parseColor("#F8F8F8"))
+                            otherBinding.filterCardView.setCardBackgroundColor(
+                                Color.parseColor(
+                                    "#F8F8F8"
+                                )
+                            )
                             otherBinding.tvCategory.setTextColor(Color.parseColor("#A0A1A3"))
                             otherBinding.tvCategory.updatePadding(right = paddingInPx)
                             otherBinding.imageView4.visibility = View.GONE
@@ -144,25 +143,44 @@ class ProductFragment : Fragment(), OnClickListener {
 
                 filterBinding.imageView4.setOnClickListener {
                     for (otherBinding in filterViews) {
-                        otherBinding.filterCardView.setCardBackgroundColor(Color.parseColor("#F8F8F8"))
+                        otherBinding.filterCardView.setCardBackgroundColor(
+                            Color.parseColor(
+                                "#F8F8F8"
+                            )
+                        )
                         otherBinding.tvCategory.setTextColor(Color.parseColor("#A0A1A3"))
                         otherBinding.tvCategory.updatePadding(right = paddingInPx)
                         otherBinding.imageView4.visibility = View.GONE
                     }
-                    viewModel.setActiveCategoryList()
                     binding.customToolbar.tvScreenName.text = "Товары"
-                    viewModel.productList.observe(viewLifecycleOwner) { product ->
-                        adapter.submitList(product)
-                    }
+                    viewModel.setStateProducts()
                 }
             }
         }
     }
 
+    private fun loadData() {
+        if (!isNetworkAvailable(requireContext())) {
+            Toast.makeText(
+                requireContext(),
+                "Проверьте подключение к интернету!",
+                Toast.LENGTH_SHORT
+            ).show()
+        } else {
+            viewModel.loadMoreProducts()
+            viewModel.getCategories()
+            binding.ivReloaded.visibility = View.INVISIBLE
+        }
+    }
 
-    private fun showProducts(adapter: ProductAdapter) {
-        viewModel.productList.observe(viewLifecycleOwner) {
-            adapter.submitList(it)
+    private fun reloadNetwork() {
+        if (!isNetworkAvailable(requireContext()) && viewModel.state.value == null) {
+            binding.ivReloaded.visibility = View.VISIBLE
+        } else {
+            binding.ivReloaded.visibility = View.INVISIBLE
+        }
+        binding.ivReloaded.setOnClickListener {
+            loadData()
         }
     }
 
@@ -174,7 +192,7 @@ class ProductFragment : Fragment(), OnClickListener {
                 val lastVisibleItemPosition = layoutManager.findLastVisibleItemPosition()
                 val isLastItem =
                     lastVisibleItemPosition >= (recyclerView.adapter?.itemCount ?: 0) - 1
-                if (isLastItem && !viewModel.isCategoryListActive.value!!) {
+                if (isLastItem && viewModel.state.value is State.Products) {
                     if (isNetworkAvailable(requireContext())) {
                         viewModel.loadMoreProducts()
                     } else {
@@ -199,16 +217,6 @@ class ProductFragment : Fragment(), OnClickListener {
     private fun addToolbar() {
         binding.customToolbar.tvScreenName.text = "Товары"
         binding.customToolbar.imageView.visibility = View.INVISIBLE
-    }
-
-    private fun showProgressBar() {
-        viewModel.progressBar.observe(viewLifecycleOwner) {
-            if (it) {
-                binding.progressBar.visibility = View.VISIBLE
-            } else {
-                binding.progressBar.visibility = View.INVISIBLE
-            }
-        }
     }
 
     override fun onAttach(context: Context) {

@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.productsapp.domain.entities.ProductEntity
+import com.example.productsapp.domain.state.State
 import com.example.productsapp.domain.usecases.GetProductUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -14,13 +15,13 @@ class DetailInfoViewModel @Inject constructor(
     private val getProductUseCase: GetProductUseCase
 ) : ViewModel() {
 
-    private val _product = MutableLiveData<ProductEntity>()
-    val product: LiveData<ProductEntity>
-        get() = _product
+    private val _state = MutableLiveData<State>()
+    val state: LiveData<State> = _state
 
     fun getProduct(productEntity: ProductEntity) {
         viewModelScope.launch(Dispatchers.IO) {
-            _product.postValue(getProductUseCase.invoke(productEntity))
+            _state.postValue(State.Loading)
+            _state.postValue(State.Product(product = getProductUseCase.invoke(productEntity)))
         }
     }
 }

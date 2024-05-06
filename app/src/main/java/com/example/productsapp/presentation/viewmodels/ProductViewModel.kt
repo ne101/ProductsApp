@@ -1,11 +1,13 @@
 package com.example.productsapp.presentation.viewmodels
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.productsapp.domain.entities.CategoriesEntity
 import com.example.productsapp.domain.entities.ProductEntity
+import com.example.productsapp.domain.state.State
 import com.example.productsapp.domain.usecases.GetCategoryListUseCase
 import com.example.productsapp.domain.usecases.GetProductListUseCase
 import com.example.productsapp.domain.usecases.GetProductListWithCategoryUseCase
@@ -19,59 +21,46 @@ class ProductViewModel @Inject constructor(
     private val getProductListWithCategory: GetProductListWithCategoryUseCase
 ) : ViewModel() {
 
-    private var skip = 0
-    private var isLoading = false
-    private var _isCategoryListActive = MutableLiveData<Boolean>()
-    val isCategoryListActive: LiveData<Boolean>
-        get() = _isCategoryListActive
-    private val _productList = MutableLiveData<MutableList<ProductEntity>>()
-    val productList: LiveData<MutableList<ProductEntity>>
-        get() = _productList
-    private var _progressBar = MutableLiveData<Boolean>()
-    val progressBar: LiveData<Boolean>
-        get() = _progressBar
-    private val _categoryList = MutableLiveData<CategoriesEntity>()
-    val categoryList: LiveData<CategoriesEntity>
-        get() = _categoryList
-    private val _productListWithCategory = MutableLiveData<List<ProductEntity>>()
-    val productListWithCategory: LiveData<List<ProductEntity>>
-        get() = _productListWithCategory
+    private val _state = MutableLiveData<State>()
+    val state: LiveData<State> = _state
 
 
-    fun setActiveCategoryList() {
-        _isCategoryListActive.value = false
-    }
+    private val currentProducts = mutableListOf<ProductEntity>()
+
     fun loadMoreProducts() {
         viewModelScope.launch(Dispatchers.IO) {
-            _isCategoryListActive.postValue(false)
-            if (!isLoading && skip < 100) {
-                isLoading = true
-                _progressBar.postValue(true)
-                val newProducts = getProductListUseCase.invoke(skip).products
-                val updatedList = mutableListOf<ProductEntity>().apply {
-                    addAll(_productList.value ?: emptyList())
-                    addAll(newProducts)
-                }
-                _productList.postValue(updatedList)
-                skip += 20
-                _progressBar.postValue(false)
-                isLoading = false
+            if (_state.value != State.Loading && currentProducts.size < 100) {
+                _state.postValue(State.Loading)
+                val newProducts = getProductListUseCase.invoke(currentProducts.size).products
+                currentProducts.addAll(newProducts)
+                Log.d("loadMoreProducts", currentProducts.size.toString())
+                _state.postValue(State.Products(products = currentProducts.toList()))
+            }
+            if (currentProducts.size >= 100) {
+                _state.postValue(State.ListIsFull(products = currentProducts.toList()))
             }
         }
     }
 
+    fun setStateProducts() {
+        _state.value = State.Products(currentProducts.toList())
+    }
     fun getProductListWithCategory(category: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            _isCategoryListActive.postValue(true)
-            _progressBar.postValue(true)
-            _productListWithCategory.postValue(getProductListWithCategory.invoke(category).products)
-            _progressBar.postValue(false)
+            _state.postValue(State.Loading)
+            _state.postValue(
+                State.ProductsWithCategories(
+                    productsWithCategories = getProductListWithCategory.invoke(
+                        category
+                    ).products
+                )
+            )
         }
     }
 
     fun getCategories() {
         viewModelScope.launch(Dispatchers.IO) {
-            _categoryList.postValue(getCategoryListUseCase.invoke())
+            _state.postValue(State.Categories(categories = getCategoryListUseCase.invoke()))
         }
     }
 
